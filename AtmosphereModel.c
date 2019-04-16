@@ -6,7 +6,7 @@
 #include <math.h>
 
 #include "CommandLineInterface/CLIcore.h"
-#include "CLIcore.h"
+
 #include "COREMOD_tools/COREMOD_tools.h"
 
 #include "AtmosphereModel/AtmosphereModel.h"
@@ -251,7 +251,7 @@ void __attribute__ ((constructor)) libinit_AtmosphereModel()
 	if( INITSTATUS_AtmosphereModel == 0)
 	{
 		init_AtmosphereModel();
-		RegisterModule(__FILE__, "cacao", "Atmosphere Model");
+		RegisterModule(__FILE__, "cacao-opt", "Atmosphere Model");
 		INITSTATUS_AtmosphereModel = 1;
 	}
 }
@@ -2631,6 +2631,7 @@ double AirMixture_N(double lambda, double dens_N2, double dens_O2, double dens_A
     int llidir, lliOK;
 	float alpha;
 
+	double val;
 
 	// compressibility factors at STP
 	
@@ -2703,10 +2704,14 @@ double AirMixture_N(double lambda, double dens_N2, double dens_O2, double dens_A
                     lli += llidir*llistep;
                 llidir = -llidir;
             }
-        alpha = (lambda-RIA_N2_lambda[lli])/(RIA_N2_lambda[lli+1]-RIA_N2_lambda[lli]);
-    //    printf("%d   alpha = %f \n", llidir, alpha);
+        alpha = ( lambda - RIA_N2_lambda[lli] ) / ( RIA_N2_lambda[lli+1] - RIA_N2_lambda[lli] );
+    
         lliprecompN2 = lli;
         n = (1.0-alpha)*RIA_N2_ri[lli] + alpha*RIA_N2_ri[lli+1];
+    
+	/*	if((lambda > 2.555e-6) && (lambda < 2.556e-6))
+			printf("%8ld   %4d   alpha = %6.4f   %.8f  %.6f  %.6f    %.6f  %.6f    %.6f\n", lli, llidir, alpha, 1.0e6*lambda, 1.0e6*RIA_N2_lambda[lli], 1.0e6*RIA_N2_lambda[lli+1], (RIA_N2_ri[lli]-1.0)*1.0e6, (RIA_N2_ri[lli+1]-1.0)*1.0e6, (n-1.0)*1e6);
+    */  
         abscoeff = RIA_N2_abs[lli];
     }
     else
@@ -3216,7 +3221,13 @@ double AirMixture_N(double lambda, double dens_N2, double dens_O2, double dens_A
     LL = LLN2 + LLO2 + LLAr + LLH2O + LLCO2 + LLNe + LLHe + LLCH4 + LLKr + LLH2 + LLO3 + LLN + LLO + LLH;
     n = sqrt((2.0*LL+1.0)/(1.0-LL));
 
-    return(n-1.0);
+
+	val = n - 1.0;
+
+/*	if((lambda > 2.555e-6) && (lambda < 2.556e-6))
+		printf("      val = %.6f   %.6f\n", (n-1.0)*1.0e6, val*1.0e6);
+*/
+    return (val);
 }
 
 
@@ -3228,10 +3239,10 @@ double AirMixture_N(double lambda, double dens_N2, double dens_O2, double dens_A
 // computes N = (n-1)
 // absorption coefficient stored in v_ABSCOEFF variable
 //
-float AtmosphereModel_stdAtmModel_N(float alt, float lambda, int mode)
+double AtmosphereModel_stdAtmModel_N(float alt, double lambda, int mode)
 {
     float dens;
-    float val;
+    double val;
     double n;
 //    struct nrlmsise_output output;
 //    struct nrlmsise_input input;
@@ -3314,6 +3325,10 @@ float AtmosphereModel_stdAtmModel_N(float alt, float lambda, int mode)
 
 
     val = AirMixture_N(lambda, dens_N2, dens_O2, dens_Ar, dens_H2O, dens_CO2, dens_Ne, dens_He, dens_CH4, dens_Kr, dens_H2, dens_O3, dens_N, dens_O, dens_H);
+	/*
+	 * if((lambda > 2.555e-6) && (lambda < 2.556e-6))
+		printf("      val = %.6f\n\n", val*1.0e6);
+*/
 
 	if(mode==1) // testing
 		{
